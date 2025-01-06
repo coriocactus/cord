@@ -342,16 +342,16 @@ whatIfsConfig =
         (Released)
         (Nothing)
     , WhatIf
-        (WhatIfQuestion "anorby?")
+        (WhatIfQuestion "opinions have consequences?")
         (WhatIfURL "https://anorby.cordcivilian.com")
         (WhatIfSource "https://github.com/cordcivilian/anorby")
         (WIP)
         (Nothing)
     , WhatIf
-        (WhatIfQuestion "parallel?")
-        (WhatIfURL "https://parallel.cordcivilian.com")
-        (WhatIfSource "https://github.com/cordcivilian/parallel")
-        (Announced)
+        (WhatIfQuestion "habits ruled?")
+        (WhatIfURL "https://batsch.cordcivilian.com")
+        (WhatIfSource "https://github.com/cordcivilian/batsch")
+        (WIP)
         (Nothing)
     ]
 
