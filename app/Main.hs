@@ -196,7 +196,7 @@ notFoundTemplate = H.docTypeHtml $ H.html $ do
 cssEntry :: T.Text -> [T.Text] -> T.Text
 cssEntry selector properties = T.unlines
     [ selector <> " {"
-    , T.unlines (map (\p -> "    " <> p <> ";") properties)
+    , T.intercalate "\n" (map (\p -> "    " <> p <> ";") properties)
     , "}"
     ]
 
@@ -265,7 +265,7 @@ fullCSS = combineCSS
     , frameCSS
     , linkCSS
     , hrCSS
-    , whatIfQuestionCSS
+    -- , whatIfQuestionCSS
     , whatIfSourceCSS
     ]
 
