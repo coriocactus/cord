@@ -228,8 +228,6 @@ frameCSS = cssEntry "#frame"
     , cssProperty "align-content" "center"
     , cssProperty "border" "3px"
     , cssProperty "box-sizing" "border-box"
-    , cssProperty "background" "light-dark(white, black)"
-    , cssProperty "color" "light-dark(black, white)"
     ]
 
 linkCSS :: T.Text
@@ -333,27 +331,28 @@ getNotification body = case JSON.eitherDecode body of
 
 -- ---------------------------------------------------------------------------
 
-whatIfsConfig :: [WhatIf]
-whatIfsConfig = 
-    [ WhatIf
-        (WhatIfQuestion "websites are cool again?")
-        (WhatIfURL "https://www.cordcivilian.com")
-        (WhatIfSource "https://github.com/cordcivilian/cord")
-        (Released)
-        (Nothing)
-    , WhatIf
-        (WhatIfQuestion "opinions have consequences?")
-        (WhatIfURL "https://anorby.cordcivilian.com")
-        (WhatIfSource "https://github.com/cordcivilian/anorby")
-        (WIP)
-        (Nothing)
-    , WhatIf
-        (WhatIfQuestion "habits ruled?")
-        (WhatIfURL "https://batsch.cordcivilian.com")
-        (WhatIfSource "https://github.com/cordcivilian/batsch")
-        (WIP)
-        (Nothing)
-    ]
+whatIfsConfig :: Bool -> [WhatIf]
+whatIfsConfig prod = 
+    let source = if prod then Nothing else Just $ WhatIfLastModified "local"
+    in [ WhatIf
+            (WhatIfQuestion "websites are cool again?")
+            (WhatIfURL "https://www.cordcivilian.com")
+            (WhatIfSource "https://github.com/cordcivilian/cord")
+            (Released)
+            source
+       , WhatIf
+            (WhatIfQuestion "opinions have consequences?")
+            (WhatIfURL "https://anorby.cordcivilian.com")
+            (WhatIfSource "https://github.com/cordcivilian/anorby")
+            (WIP)
+            source
+       , WhatIf
+            (WhatIfQuestion "habits ruled?")
+            (WhatIfURL "https://batsch.cordcivilian.com")
+            (WhatIfSource "https://github.com/cordcivilian/batsch")
+            (WIP)
+            source
+       ]
 
 -- ---------------------------------------------------------------------------
 
@@ -363,5 +362,5 @@ main = do
     let autoPort = 5000
         port = maybe autoPort read maybePort
     putStrLn $ "Server starting on port " ++ show (port :: Int)
-    cStates <- IOR.newIORef whatIfsConfig
+    cStates <- IOR.newIORef $ whatIfsConfig True
     Warp.run port $ monolith cStates
