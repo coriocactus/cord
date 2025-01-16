@@ -97,6 +97,9 @@ rootTemplateRoute statesRef _ = do
 rootTemplate :: [WhatIf] -> H.Html
 rootTemplate states = H.docTypeHtml $ H.html $ do
     H.head $ do
+        H.link H.! A.rel "icon" H.! A.href "data:,"
+        H.meta H.! A.name "viewport" H.!
+            A.content "width=device-width, initial-scale=1.0"
         H.title "eta: 0 mins"
         H.style $ H.text fullCSS
     H.body $ do
