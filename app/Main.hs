@@ -104,12 +104,12 @@ rootTemplate states = H.docTypeHtml $ H.html $ do
         H.style $ H.text fullCSS
     H.body $ do
         H.span H.! A.id "top" $ ""
-        H.div H.! A.id "frame" $ do
+        H.div H.! A.class_ "frame" $ do
             H.h1 "internet common #5819574234"
             H.div $ do
                 H.a H.! A.href "#what-if" $ "what if ..."
         H.span H.! A.id "what-if" $ ""
-        H.div H.! A.id "frame" $ do
+        H.div H.! A.class_ "frame" $ do
             H.h1 "what if ..."
             mkWhatIfsHtml states
 
@@ -189,7 +189,7 @@ notFoundTemplate = H.docTypeHtml $ H.html $ do
         H.title "error"
         H.style $ I.preEscapedText fullCSS
     H.body $ do
-        H.div H.! A.id "frame" $ do
+        H.div H.! A.class_ "frame" $ do
             H.h1 "404 - not found"
             H.h1 $ do
                H.a H.! A.class_ "link" H.! A.href "/" $ "home"
@@ -224,7 +224,7 @@ bodyHtmlCSS = cssEntry "body, html"
     ]
 
 frameCSS :: T.Text
-frameCSS = cssEntry "#frame"
+frameCSS = cssEntry ".frame"
     [ cssProperty "min-height" "100vh"
     , cssProperty "min-height" "100dvh"
     , cssProperty "text-align" "center"
