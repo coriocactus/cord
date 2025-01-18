@@ -349,12 +349,6 @@ whatIfsConfig prod =
             (WhatIfSource "https://github.com/cordcivilian/anorby")
             (WIP)
             source
-       , WhatIf
-            (WhatIfQuestion "habits ruled?")
-            (WhatIfURL "https://batsch.cordcivilian.com")
-            (WhatIfSource "https://github.com/cordcivilian/batsch")
-            (WIP)
-            source
        ]
 
 -- ---------------------------------------------------------------------------
