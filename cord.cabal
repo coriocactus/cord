@@ -2,11 +2,10 @@ cabal-version:      3.0
 name:               cord
 version:            0.1.0.0
 license:            MIT
-license-file:       LICENSE
+license-file:       README.md
 author:             cordcivilian
 maintainer:         public@cordcivilian.com
 build-type:         Simple
-extra-doc-files:    README.md
 
 executable cord
   ghc-options:      -Wall
