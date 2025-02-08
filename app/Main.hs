@@ -190,7 +190,7 @@ getVersion iso8601 = do
       dailyVersion =
         DateTimeFormat.formatTime
         DateTimeFormat.defaultTimeLocale
-        "%Y-%m-%d"
+        "%Y.%m.%d"
         utcTime
       version = dailyVersion ++ [hourlyVersion]
   return version
