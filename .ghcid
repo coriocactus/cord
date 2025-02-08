@@ -1,5 +1,4 @@
---setup ":set -fobject-code -O2"
---reload=./app
--T Main.main
 --test-message="Running cord..."
+--test=Main.main
 --restart=./cord.cabal
+--reload=./app

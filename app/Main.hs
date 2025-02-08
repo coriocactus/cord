@@ -2,33 +2,32 @@
 
 module Main where
 
-import qualified System.Environment as Env
-
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
+import qualified Control.Monad as Monad
+import qualified Data.Aeson as JSON
+import qualified Data.Bits as Bits
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import qualified Data.Bits as Bits
-import qualified Data.Word as Word
-import qualified Data.IORef as IOR
 import qualified Data.Digest.Pure.SHA as SHA
-import qualified Data.Aeson as JSON
-
-import qualified Control.Monad as Monad
-
+import qualified Data.IORef as IOR
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import qualified Data.Time as Time
+import qualified Data.Time.Format as DateTimeFormat
+import qualified Data.Time.Format.ISO8601 as ISO8601
+import qualified Data.Word as Word
+import qualified Network.HTTP.Simple as HTTP
 import qualified Network.HTTP.Types as HTTP
 import qualified Network.HTTP.Types.Header as Headers
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Middleware.RequestLogger as Mid
-
-import qualified Text.Blaze.Internal as I
+import qualified System.Environment as Env
+import qualified Text.Blaze.Html.Renderer.Utf8 as R
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-import qualified Text.Blaze.Html.Renderer.Utf8 as R
+import qualified Text.Blaze.Internal as I
 
-import qualified SourceMeta as Source
 
 application :: IOR.IORef [WhatIf] -> Wai.Application
 application statesRef request respond = do
@@ -60,7 +59,7 @@ updateAllLastModified statesRef = do
     updatedConfig <- Monad.forM currentConfig $ \w -> do
         case wLastModified w of
             Nothing -> do
-                liveLastMod <- Source.getUpdatedAt $ unSource $ wSource w
+                liveLastMod <- getUpdatedAt $ unSource $ wSource w
                 case liveLastMod of 
                     "-unavailable" -> return $ w
                         { wLastModified = Nothing
@@ -334,6 +333,67 @@ getNotification body = case JSON.eitherDecode body of
 
 -- ---------------------------------------------------------------------------
 
+data RepoInfo = RepoInfo
+  { repoHtmlURL :: String
+  , repoUpdatedAt :: String
+  } deriving (Show)
+
+instance JSON.FromJSON RepoInfo where
+  parseJSON = JSON.withObject "RepoInfo" $ \v -> RepoInfo
+    <$> v JSON..: "html_url"
+    <*> v JSON..: "updated_at"
+
+getRepoInfo :: String -> String -> IO (Either String RepoInfo)
+getRepoInfo owner repo = do
+  let url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo
+  request <- HTTP.parseRequest url
+  response <- HTTP.httpLBS $
+    HTTP.addRequestHeader "User-Agent" "cordcivilian" request
+  let jsonBody = HTTP.getResponseBody response
+  return $ JSON.eitherDecode jsonBody
+
+getUpdatedAt :: String -> IO String
+getUpdatedAt s = do
+    let (owner, repo) = getOwnerRepoFromSourceLink s
+    result <- getRepoInfo owner repo
+    case result of
+        Right repoInfo -> do
+            let maybeUpdatedAt = getVersion $ repoUpdatedAt repoInfo -- pure
+            return $ maybe "-unavailable" id maybeUpdatedAt
+        _ -> return "-unavailable"
+
+getVersion :: String -> Maybe String
+getVersion iso8601 = do
+    utcTime <- ISO8601.iso8601ParseM iso8601 :: Maybe Time.UTCTime
+    let hour =
+          DateTimeFormat.formatTime
+          DateTimeFormat.defaultTimeLocale
+          "%H"
+          utcTime
+        hourlyVersion = ['a'..'z'] !! read hour
+        dailyVersion =
+          DateTimeFormat.formatTime
+          DateTimeFormat.defaultTimeLocale
+          "%Y-%m-%d"
+          utcTime
+        version = dailyVersion ++ [hourlyVersion]
+    return version
+
+getOwnerRepoFromSourceLink :: String -> (String, String)
+getOwnerRepoFromSourceLink s = extractTuple $ split s '/'
+
+extractTuple :: [String] -> (String, String)
+extractTuple (_:_:_:owner:repo:_) = (owner, repo)
+extractTuple _ = ("", "")
+
+split :: String -> Char -> [String]
+split str delim =
+  case break (==delim) str of
+    (a, _:b) -> a : split b delim
+    (a, _)   -> [a]
+
+-- ---------------------------------------------------------------------------
+
 whatIfsConfig :: Bool -> [WhatIf]
 whatIfsConfig prod = 
     let source = if prod then Nothing else Just $ WhatIfLastModified "local"
@@ -359,5 +419,5 @@ main = do
     let autoPort = 5000
         port = maybe autoPort read maybePort
     putStrLn $ "Server starting on port " ++ show (port :: Int)
-    cStates <- IOR.newIORef $ whatIfsConfig True
+    cStates <- IOR.newIORef $ whatIfsConfig False
     Warp.run port $ monolith cStates

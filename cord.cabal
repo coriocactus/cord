@@ -11,7 +11,6 @@ extra-doc-files:    README.md
 executable cord
   ghc-options:      -Wall
   main-is:          Main.hs
-  other-modules:    SourceMeta,
   build-depends:    base ^>=4.20.0.0
                     , time
                     , wai
