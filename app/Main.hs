@@ -111,18 +111,17 @@ rootTemplate projects = H.docTypeHtml $ H.html $ do
 
 projectTemplate :: Project -> H.Html
 projectTemplate p = H.tr $ do
-  H.td $ H.a H.! A.href (H.toValue $ pURL p) $ H.string (pName p)
   H.td $ do
-    H.string "("
     H.string $ showStatus (pStatus p)
-    H.string ": "
+    H.string "["
     H.a H.! A.href (H.toValue $ pSource p) $
       H.string $ showVersion $ pVersion p
-    H.string ")"
+    H.string "]"
+  H.td $ H.a H.! A.href (H.toValue $ pURL p) $ H.string (pName p)
 
 showStatus :: ProjectStatus -> String
 showStatus Released = "RELEASED"
-showStatus WIP = "WIP"
+showStatus Building = "BUILDING"
 showStatus Planning = "PLANNING"
 
 showVersion :: Maybe Version -> String
@@ -269,7 +268,7 @@ constantTimeCompare a b =
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
 
-data ProjectStatus = Released | WIP | Planning
+data ProjectStatus = Released | Building | Planning
   deriving (Eq, Show, Enum, Bounded)
 
 newtype Version = Version { unVersion :: String }
@@ -299,7 +298,7 @@ projectsConfig prod =
           Released version
       , Project "anorby" "https://anorby.cordcivilian.com"
           "https://github.com/cordcivilian/anorby"
-          WIP version
+          Building version
       ]
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
