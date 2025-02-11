@@ -106,18 +106,17 @@ rootTemplate projects = H.docTypeHtml $ H.html $ do
     cordCSS
   H.body $ do
     H.h2 "projects"
-    H.table $ mapM_ projectTemplate projects
+    mapM_ projectTemplate projects
     H.p "public@cordcivilian.com"
 
 projectTemplate :: Project -> H.Html
-projectTemplate p = H.tr $ do
-  H.td $ do
-    H.string $ showStatus (pStatus p)
-    H.string "["
-    H.a H.! A.href (H.toValue $ pSource p) $
-      H.string $ showVersion $ pVersion p
-    H.string "]"
-  H.td $ H.a H.! A.href (H.toValue $ pURL p) $ H.string (pName p)
+projectTemplate p = H.div $ do
+  H.string $ showStatus (pStatus p)
+  H.string "["
+  H.a H.! A.href (H.toValue $ pSource p) $
+    H.string $ showVersion $ pVersion p
+  H.string "]"
+  H.a H.! A.href (H.toValue $ pURL p) $ H.string (pName p)
 
 showStatus :: ProjectStatus -> String
 showStatus Released = "RELEASED"
