@@ -65,7 +65,7 @@ hookRoute projectsRef request body = do
       maybeEvent = getEventInfo body
       signature = lookup "x-hub-signature-256" $ Wai.requestHeaders request
       eitherVerification = verifySignature body signature secret
-  statusCode <-
+  (statusCode, content) <-
     case (maybeEvent, eitherVerification) of
       (Just event, Right _) ->
         case eventRef event of
@@ -73,13 +73,15 @@ hookRoute projectsRef request body = do
             let maybeVersion = getVersion $ eventUpdatedAt event
                 version = maybe "-unavailable" id maybeVersion
             _ <- updateRepoLastModified projectsRef (eventRepoHtmlUrl event) (Version version)
-            return HTTP.status200
-          _ -> return HTTP.status200
-      (_, _) -> return HTTP.status401
+            return (HTTP.status200, "repo version updated")
+          _ -> return (HTTP.status200, "repo event ignored")
+      (Just _, Left _) -> return (HTTP.status401, "untrusted event disgarded")
+      (Nothing, Right _) -> return (HTTP.status401, "corrupted event disgarded")
+      (Nothing, Left _) -> return (HTTP.status401, "event disgarded")
   return $ Wai.responseLBS
     statusCode
     [(Headers.hContentType, "text/plain")]
-    (BSL.pack "event processed")
+    (BSL.pack content)
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
 
