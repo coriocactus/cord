@@ -6,13 +6,10 @@ jobs:
   build-deploy:
     runs-on: self-hosted
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      - name: Build and Deploy
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           cabal update
           cabal build
-          cabal install exe:cord --install-method=copy --overwrite-policy=always --installdir=~/deploy/bin
-          # cabal run
-          # pkill -f myapp || true
-          # nohup /path/to/deploy/myapp &
+          cabal install exe:cord --install-method=copy --overwrite-policy=always --installdir=$HOME/deploy/bin/cord
+          pkill -f $HOME/deploy/bin/cord/cord || true
+          RUNNER_TRACKING_ID="" && nohup $HOME/deploy/bin/cord/cord > cord.log &
