@@ -102,12 +102,11 @@ rootTemplate projects = H.docTypeHtml $ H.html $ do
     H.link H.! A.rel "icon" H.! A.href "data:,"
     H.meta H.! A.name "viewport" H.!
       A.content "width=device-width, initial-scale=1.0"
-    H.title "cordcvln"
+    H.title "cord"
     cordCSS
   H.body $ do
     H.h2 "projects"
     mapM_ projectTemplate projects
-    H.p "public@cordcivilian.com"
 
 projectTemplate :: Project -> H.Html
 projectTemplate p = H.div $ do
@@ -162,7 +161,7 @@ getRepoInfo owner repo = do
   let url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo
   request <- HTTP.parseRequest url
   response <- HTTP.httpLBS $
-    HTTP.addRequestHeader "User-Agent" "cordcivilian" request
+    HTTP.addRequestHeader "User-Agent" "joshwongcc" request
   let jsonBody = HTTP.getResponseBody response
   return $ JSON.eitherDecode jsonBody
 
@@ -286,17 +285,17 @@ data Project = Project
 projectsConfig :: Bool -> [Project]
 projectsConfig prod =
   let version = if prod then Nothing else Just $ Version "local"
-  in  [ Project "hooks" "https://github.com/cordcivilian/hooks"
-          "https://github.com/cordcivilian/hooks"
+  in  [ Project "hooks" "https://github.com/joshwongcc/hooks"
+          "https://github.com/joshwongcc/hooks"
           Released version
-      , Project "cord" "https://www.cordcivilian.com"
-          "https://github.com/cordcivilian/cord"
+      , Project "cord" "https://github.com/joshwongcc/cord"
+          "https://github.com/joshwongcc/cord"
           Released version
-      , Project "claudia.vim" "https://github.com/cordcivilian/claudia.vim"
-          "https://github.com/cordcivilian/claudia.vim"
+      , Project "claudia.vim" "https://github.com/joshwongcc/claudia.vim"
+          "https://github.com/joshwongcc/claudia.vim"
           Released version
-      , Project "anorby" "https://anorby.cordcivilian.com"
-          "https://github.com/cordcivilian/anorby"
+      , Project "anorby" "https://github.com/joshwongcc/anorby"
+          "https://github.com/joshwongcc/anorby"
           Building version
       ]
 

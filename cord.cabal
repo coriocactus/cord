@@ -3,8 +3,7 @@ name:               cord
 version:            0.1.0.0
 license:            MIT
 license-file:       README.md
-author:             cordcivilian
-maintainer:         public@cordcivilian.com
+author:             joshwongcc
 build-type:         Simple
 
 executable cord
