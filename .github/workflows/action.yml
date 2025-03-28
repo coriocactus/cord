@@ -1,0 +1,23 @@
+on:
+  push:
+    branches:
+      - main
+
+env:
+  APP_NAME: cord
+
+jobs:
+  build-deploy-haskell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: 9.10.1
+          cabal-version: 3.12.1.0
+      - uses: actions/checkout@v4
+      - run: |
+          cabal update
+          cabal install exe:$APP_NAME --install-method=copy --overwrite-policy=always --installdir=/apps/$APP_NAME
+          # cabal run
+          # pkill -f myapp || true
+          # nohup /path/to/deploy/myapp &

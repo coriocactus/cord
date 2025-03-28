@@ -35,15 +35,9 @@ application projectsRef request respond = do
   let request_method = BS.unpack $ Wai.requestMethod request
       request_path = BS.unpack $ Wai.rawPathInfo request
   case (request_method, request_path) of
-    ("GET", "/") -> do
-      response <- rootTemplateRoute projectsRef request
-      respond response
-    ("GET", "/test/states") -> do
-      response <- statesRoute projectsRef request
-      respond response
-    ("POST", "/updated") -> do
-      response <- updatedRoute projectsRef request body
-      respond response
+    ("GET", "/") -> rootTemplateRoute projectsRef request >>= respond
+    ("GET", "/test/states") -> statesRoute projectsRef request >>= respond
+    ("POST", "/updated") -> updatedRoute projectsRef request body >>= respond
     _ -> respond $ notFoundTemplateRoute request
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
@@ -64,8 +58,7 @@ statesRoute projectsRef _ = do
     [(HTTP.hContentType, "text/plain")]
     (BSL.pack $ unlines $ map show projects)
 
-updatedRoute :: IOR.IORef [Project] -> Wai.Request -> BSL.ByteString
-             -> IO Wai.Response
+updatedRoute :: IOR.IORef [Project] -> Wai.Request -> BSL.ByteString -> IO Wai.Response
 updatedRoute projectsRef request body = do
   maybeSecret <- Env.lookupEnv "HOOKER"
   let secret = maybe "" id maybeSecret
@@ -77,10 +70,7 @@ updatedRoute projectsRef request body = do
       (Just notification, Right _) -> do
         let repo = sourceRepo notification
             version = sourceVersion notification
-        _ <- updateRepoLastModified
-              projectsRef
-              repo
-              (Version version)
+        _ <- updateRepoLastModified projectsRef repo (Version version)
         return HTTP.status200
       (_, _) -> return HTTP.status401
   return $ Wai.responseLBS
@@ -100,8 +90,7 @@ rootTemplate :: [Project] -> H.Html
 rootTemplate projects = H.docTypeHtml $ H.html $ do
   H.head $ do
     H.link H.! A.rel "icon" H.! A.href "data:,"
-    H.meta H.! A.name "viewport" H.!
-      A.content "width=device-width, initial-scale=1.0"
+    H.meta H.! A.name "viewport" H.! A.content "width=device-width, initial-scale=1.0"
     H.title "cord"
     cordCSS
   H.body $ do
@@ -112,8 +101,7 @@ projectTemplate :: Project -> H.Html
 projectTemplate p = H.div $ do
   H.string $ showStatus (pStatus p)
   H.string "["
-  H.a H.! A.href (H.toValue $ pSource p) $
-    H.string $ showVersion $ pVersion p
+  H.a H.! A.href (H.toValue $ pSource p) $ H.string $ showVersion $ pVersion p
   H.string "]"
   H.a H.! A.href (H.toValue $ pURL p) $ H.string (pName p)
 
@@ -136,8 +124,7 @@ notFoundTemplate :: H.Html
 notFoundTemplate = H.docTypeHtml $ H.html $ do
   H.head $ do
     H.link H.! A.rel "icon" H.! A.href "data:,"
-    H.meta H.! A.name "viewport" H.!
-      A.content "width=device-width, initial-scale=1.0"
+    H.meta H.! A.name "viewport" H.! A.content "width=device-width, initial-scale=1.0"
     H.title "error"
     cordCSS
   H.body $ do
@@ -160,8 +147,7 @@ getRepoInfo :: String -> String -> IO (Either String RepoInfo)
 getRepoInfo owner repo = do
   let url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo
   request <- HTTP.parseRequest url
-  response <- HTTP.httpLBS $
-    HTTP.addRequestHeader "User-Agent" "joshwongcc" request
+  response <- HTTP.httpLBS $ HTTP.addRequestHeader "User-Agent" "joshwongcc" request
   let jsonBody = HTTP.getResponseBody response
   return $ JSON.eitherDecode jsonBody
 
@@ -258,11 +244,7 @@ verifySignature body signature secret = do
         else Left "signatures do not match"
 
 constantTimeCompare :: BS.ByteString -> BS.ByteString -> Bool
-constantTimeCompare a b =
-  BS.length a == BS.length b &&
-    0 == foldl'
-      (\acc (x, y) -> acc Bits..|. Bits.xor x y)
-      (0 :: Word.Word8) (B.zip a b)
+constantTimeCompare a b = BS.length a == BS.length b && 0 == foldl' (\acc (x, y) -> acc Bits..|. Bits.xor x y) (0 :: Word.Word8) (B.zip a b)
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
 
@@ -285,18 +267,12 @@ data Project = Project
 projectsConfig :: Bool -> [Project]
 projectsConfig prod =
   let version = if prod then Nothing else Just $ Version "local"
-  in  [ Project "hooks" "https://github.com/joshwongcc/hooks"
-          "https://github.com/joshwongcc/hooks"
-          Released version
-      , Project "cord" "https://github.com/joshwongcc/cord"
-          "https://github.com/joshwongcc/cord"
-          Released version
-      , Project "claudia.vim" "https://github.com/joshwongcc/claudia.vim"
-          "https://github.com/joshwongcc/claudia.vim"
-          Released version
-      , Project "anorby" "https://github.com/joshwongcc/anorby"
+  in  [ Project
+          "anorby"
           "https://github.com/joshwongcc/anorby"
-          Building version
+          "https://github.com/joshwongcc/anorby"
+          Building
+          version
       ]
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
