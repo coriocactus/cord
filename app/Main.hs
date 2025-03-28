@@ -223,7 +223,7 @@ instance JSON.FromJSON Event where
   parseJSON = JSON.withObject "Event" $ \v -> Event
     <$> v JSON..: "ref"
     <*> (v JSON..: "repository" >>= (JSON..: "html_url"))
-    <*> (v JSON..: "hook" >>= (JSON..: "created_at"))
+    <*> (v JSON..: "repository" >>= (JSON..: "updated_at"))
 
 getEventInfo :: BSL.ByteString -> Maybe Event
 getEventInfo body =
