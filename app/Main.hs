@@ -37,7 +37,7 @@ application projectsRef request respond = do
   case (request_method, request_path) of
     ("GET", "/") -> rootTemplateRoute projectsRef request >>= respond
     ("GET", "/test/states") -> statesRoute projectsRef request >>= respond
-    ("POST", "/updated") -> updatedRoute projectsRef request body >>= respond
+    ("POST", "/updated") -> hookRoute projectsRef request body >>= respond
     _ -> respond $ notFoundTemplateRoute request
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
@@ -58,25 +58,28 @@ statesRoute projectsRef _ = do
     [(HTTP.hContentType, "text/plain")]
     (BSL.pack $ unlines $ map show projects)
 
-updatedRoute :: IOR.IORef [Project] -> Wai.Request -> BSL.ByteString -> IO Wai.Response
-updatedRoute projectsRef request body = do
-  maybeSecret <- Env.lookupEnv "HOOKER"
+hookRoute :: IOR.IORef [Project] -> Wai.Request -> BSL.ByteString -> IO Wai.Response
+hookRoute projectsRef request body = do
+  maybeSecret <- Env.lookupEnv "GITHUB_WEBHOOK_SECRET"
   let secret = maybe "" id maybeSecret
-      maybeNotification = getNotification body
-      signature = lookup "hooker-signature-256" $ Wai.requestHeaders request
+      maybeEvent = getEventInfo body
+      signature = lookup "x-hub-signature-256" $ Wai.requestHeaders request
       eitherVerification = verifySignature body signature secret
   statusCode <-
-    case (maybeNotification, eitherVerification) of
-      (Just notification, Right _) -> do
-        let repo = sourceRepo notification
-            version = sourceVersion notification
-        _ <- updateRepoLastModified projectsRef repo (Version version)
-        return HTTP.status200
+    case (maybeEvent, eitherVerification) of
+      (Just event, Right _) ->
+        case eventRef event of
+          "refs/heads/main" -> do
+            let maybeVersion = getVersion $ eventUpdatedAt event
+                version = maybe "-unavailable" id maybeVersion
+            _ <- updateRepoLastModified projectsRef (eventRepoHtmlUrl event) (Version version)
+            return HTTP.status200
+          _ -> return HTTP.status200
       (_, _) -> return HTTP.status401
   return $ Wai.responseLBS
     statusCode
-    [(HTTP.hContentType, "text/plain")]
-    (BSL.pack "notification processed")
+    [(Headers.hContentType, "text/plain")]
+    (BSL.pack "event processed")
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
 
@@ -157,24 +160,17 @@ getUpdatedAt s = do
   result <- getRepoInfo owner repo
   case result of
       Right repoInfo -> do
-          let maybeUpdatedAt = getVersion $ repoUpdatedAt repoInfo -- pure
-          return $ maybe "-unavailable" id maybeUpdatedAt
+          let maybeVersion = getVersion $ repoUpdatedAt repoInfo
+          return $ maybe "-unavailable" id maybeVersion
       _ -> return "-unavailable"
 
 getVersion :: String -> Maybe String
 getVersion iso8601 = do
   utcTime <- ISO8601.iso8601ParseM iso8601 :: Maybe Time.UTCTime
-  let hour =
-        DateTimeFormat.formatTime
-        DateTimeFormat.defaultTimeLocale
-        "%H"
-        utcTime
-      hourlyVersion = ['a'..'z'] !! read hour
-      dailyVersion =
-        DateTimeFormat.formatTime
-        DateTimeFormat.defaultTimeLocale
-        "%Y.%m.%d"
-        utcTime
+  let hour = read (DateTimeFormat.formatTime DateTimeFormat.defaultTimeLocale "%H" utcTime) :: Int
+      shiftedHour = mod (hour - 7) 24
+      hourlyVersion = ['a'..'z'] !! shiftedHour
+      dailyVersion = DateTimeFormat.formatTime DateTimeFormat.defaultTimeLocale "%Y.%m.%d" utcTime
       version = dailyVersion ++ [hourlyVersion]
   return version
 
@@ -215,22 +211,25 @@ updateRepoLastModified projectsRef repo version = do
 
 --CRD-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D-D
 
-data Notification = Notification
-  { sourceRepo :: String, sourceVersion :: String }
-  deriving (Show)
-instance JSON.FromJSON Notification where
-  parseJSON = JSON.withObject "Notification" $ \v -> Notification
-    <$> v JSON..: "repo"
-    <*> v JSON..: "version"
+data Event = Event
+  { eventRef :: String
+  , eventRepoHtmlUrl :: String
+  , eventUpdatedAt :: String
+  } deriving (Show)
 
-getNotification :: BSL.ByteString -> Maybe Notification
-getNotification body =
+instance JSON.FromJSON Event where
+  parseJSON = JSON.withObject "Event" $ \v -> Event
+    <$> v JSON..: "ref"
+    <*> (v JSON..: "repository" >>= (JSON..: "html_url"))
+    <*> (v JSON..: "repository" >>= (JSON..: "updated_at"))
+
+getEventInfo :: BSL.ByteString -> Maybe Event
+getEventInfo body =
   case JSON.eitherDecode body of
-    Right notification -> Just notification
+    Right event -> Just event
     _ -> Nothing
 
-verifySignature :: BSL.ByteString -> Maybe BS.ByteString -> String
-                -> Either T.Text ()
+verifySignature :: BSL.ByteString -> Maybe BS.ByteString -> String -> Either T.Text ()
 verifySignature body signature secret = do
   case signature of
     Nothing -> Left "missing signature headers"
@@ -239,9 +238,10 @@ verifySignature body signature secret = do
           hmacInstance = SHA.hmacSha256 packedSecret body
           expected = BS.pack $ SHA.showDigest $ hmacInstance
           actual = TE.encodeUtf8 $ T.drop 7 $ TE.decodeUtf8 digest
-      if constantTimeCompare expected actual
-        then Right ()
-        else Left "signatures do not match"
+      if constantTimeCompare expected actual then
+        Right ()
+      else
+        Left "signatures do not match"
 
 constantTimeCompare :: BS.ByteString -> BS.ByteString -> Bool
 constantTimeCompare a b = BS.length a == BS.length b && 0 == foldl' (\acc (x, y) -> acc Bits..|. Bits.xor x y) (0 :: Word.Word8) (B.zip a b)
@@ -266,7 +266,7 @@ data Project = Project
 
 projectsConfig :: Bool -> [Project]
 projectsConfig prod =
-  let version = if prod then Nothing else Just $ Version "local"
+  let version = if prod then Nothing else Just $ Version "-local"
   in  [ Project
           "anorby"
           "https://github.com/joshwongcc/anorby"
