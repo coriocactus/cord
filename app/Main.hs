@@ -21,6 +21,8 @@ import qualified Network.HTTP.Types as HTTP
 import qualified Network.HTTP.Types.Header as Headers
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
+import qualified Network.Wai.Middleware.Gzip as Gzip
+import qualified Network.Wai.Middleware.RequestLogger as Mid
 import qualified System.Environment as Env
 import qualified Text.Blaze.Html.Renderer.Utf8 as R
 import qualified Text.Blaze.Html5 as H
@@ -287,4 +289,4 @@ main = do
       isProd = maybe False (== "1") maybeProd
   putStrLn $ "Server starting on port " ++ show port
   cStates <- IOR.newIORef $ projectsConfig isProd
-  Warp.run port $ application cStates
+  Warp.run port $ Gzip.gzip Gzip.defaultGzipSettings $ Mid.logStdout $ application cStates

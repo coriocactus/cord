@@ -12,4 +12,4 @@ jobs:
           cabal build
           cabal install exe:cord --install-method=copy --overwrite-policy=always --installdir=$HOME/deploy/bin/cord
           pkill -f $HOME/deploy/bin/cord/cord || true
-          RUNNER_TRACKING_ID="" && nohup $HOME/deploy/bin/cord/cord &
+          RUNNER_TRACKING_ID="" && nohup $HOME/deploy/bin/cord/cord > cord.log &
