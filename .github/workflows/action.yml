@@ -7,15 +7,18 @@ env:
   APP_NAME: cord
 
 jobs:
-  build-deploy-haskell:
-    runs-on: ubuntu-latest
+  CI/CD:
+    runs-on: self-hosted
     steps:
-      - uses: haskell-actions/setup@v2
+      - name: Setup Haskell
+        uses: haskell-actions/setup@v2
         with:
           ghc-version: 9.10.1
           cabal-version: 3.12.1.0
-      - uses: actions/checkout@v4
-      - run: |
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Build and Deploy
+        run: |
           cabal update
           cabal build
           cabal install exe:$APP_NAME --install-method=copy --overwrite-policy=always --installdir=/apps/$APP_NAME
