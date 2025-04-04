@@ -154,7 +154,7 @@ getRepoInfo :: String -> String -> IO (Either String RepoInfo)
 getRepoInfo owner repo = do
   let url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo
   request <- HTTP.parseRequest url
-  response <- HTTP.httpLBS $ HTTP.addRequestHeader "User-Agent" "joshwongcc" request
+  response <- HTTP.httpLBS $ HTTP.addRequestHeader "User-Agent" "coriocactus" request
   let jsonBody = HTTP.getResponseBody response
   return $ JSON.eitherDecode jsonBody
 
@@ -273,8 +273,14 @@ projectsConfig prod =
   let version = if prod then Nothing else Just $ Version "-local"
   in  [ Project
           "anorby"
-          "https://github.com/joshwongcc/anorby"
-          "https://github.com/joshwongcc/anorby"
+          "https://github.com/coriocactus/anorby"
+          "https://github.com/coriocactus/anorby"
+          Building
+          version
+      , Project
+          "melosz"
+          "https://github.com/coriocactus/melosz"
+          "https://github.com/coriocactus/melosz"
           Building
           version
       ]
